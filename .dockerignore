@@ -1,0 +1,43 @@
+# Build artifacts
+target/
+**/*.rs.bk
+*.pdb
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+secrets/
+
+# Storage (runtime data, should not be in image)
+storage/cache/*
+storage/logs/*
+storage/uploads/*
+!storage/cache/.gitkeep
+!storage/logs/.gitkeep
+!storage/uploads/.gitkeep
+
+# Database files
+*.db
+*.db-journal
+
+# Logs
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Documentation build
+docs/_build/
+docs/site/

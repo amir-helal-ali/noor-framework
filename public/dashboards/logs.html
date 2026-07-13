@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عارض السجلات - Noor Framework</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            min-height: 100vh;
+        }
+        .header {
+            background: #252526;
+            padding: 15px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 {
+            font-size: 18px;
+            color: white;
+        }
+        .header .actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #3e3e42;
+            background: #2d2d30;
+            color: #d4d4d4;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #3e3e42; }
+        .btn.active { background: #0e639c; border-color: #0e639c; color: white; }
+        .filters {
+            background: #252526;
+            padding: 12px 20px;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-group label {
+            font-size: 12px;
+            color: #888;
+        }
+        .filter-group select, .filter-group input {
+            padding: 5px 10px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            padding: 12px 20px;
+            background: #252526;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .stat-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .stat-dot.info { background: #4ade80; }
+        .stat-dot.warn { background: #facc15; }
+        .stat-dot.error { background: #f87171; }
+        .stat-dot.fatal { background: #c084fc; }
+        .log-container {
+            padding: 10px;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .log-entry {
+            display: grid;
+            grid-template-columns: 180px 80px 150px 1fr;
+            gap: 15px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #2d2d30;
+            font-size: 13px;
+            line-height: 1.5;
+            transition: background 0.1s;
+        }
+        .log-entry:hover { background: #2a2d2e; }
+        .log-time { color: #858585; }
+        .log-level {
+            font-weight: 600;
+            text-align: center;
+            border-radius: 3px;
+            padding: 2px 8px;
+            font-size: 11px;
+        }
+        .log-level.INFO { background: #1e3a1e; color: #4ade80; }
+        .log-level.WARN { background: #3a3a1e; color: #facc15; }
+        .log-level.ERROR { background: #3a1e1e; color: #f87171; }
+        .log-level.DEBUG { background: #1e2a3a; color: #60a5fa; }
+        .log-level.TRACE { background: #2a2a2a; color: #888; }
+        .log-level.FATAL { background: #3a1e3a; color: #c084fc; }
+        .log-target { color: #569cd6; }
+        .log-message { color: #d4d4d4; }
+        .log-fields {
+            color: #888;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .log-entry.expanded .log-fields { display: block; }
+        .log-fields { display: none; }
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+        .auto-scroll {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #0e639c;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 عارض السجلات - Noor Framework</h1>
+        <div class="actions">
+            <button class="btn active" onclick="toggleAutoScroll()">⏬ تمرير تلقائي</button>
+            <button class="btn" onclick="clearLogs()">🗑️ مسح</button>
+            <button class="btn" onclick="exportLogs()">📥 تصدير</button>
+            <button class="btn" onclick="location.reload()">🔄 تحديث</button>
+        </div>
+    </div>
+    
+    <div class="filters">
+        <div class="filter-group">
+            <label>المستوى:</label>
+            <select onchange="filterLevel(this.value)">
+                <option value="">الكل</option>
+                <option value="TRACE">TRACE</option>
+                <option value="DEBUG">DEBUG</option>
+                <option value="INFO" selected>INFO</option>
+                <option value="WARN">WARN</option>
+                <option value="ERROR">ERROR</option>
+                <option value="FATAL">FATAL</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>البحث:</label>
+            <input type="text" placeholder="ابحث في السجلات..." oninput="searchLogs(this.value)" style="width: 250px;">
+        </div>
+        <div class="filter-group">
+            <label>المصدر:</label>
+            <select onchange="filterTarget(this.value)">
+                <option value="">الكل</option>
+                <option value="noor::http">HTTP</option>
+                <option value="noor::orm">Database</option>
+                <option value="noor::auth">Auth</option>
+                <option value="noor::cache">Cache</option>
+                <option value="noor::queue">Queue</option>
+            </select>
+        </div>
+    </div>
+    
+    <div class="stats">
+        <div class="stat"><div class="stat-dot info"></div> <span id="info-count">0</span> INFO</div>
+        <div class="stat"><div class="stat-dot warn"></div> <span id="warn-count">0</span> WARN</div>
+        <div class="stat"><div class="stat-dot error"></div> <span id="error-count">0</span> ERROR</div>
+        <div class="stat"><div class="stat-dot fatal"></div> <span id="fatal-count">0</span> FATAL</div>
+        <div class="stat" style="margin-right: auto;">الإجمالي: <span id="total-count">0</span></div>
+    </div>
+    
+    <div class="log-container" id="logContainer">
+        <!-- Logs will be populated here -->
+        <div class="empty">جارٍ تحميل السجلات...</div>
+    </div>
+    
+    <button class="auto-scroll" onclick="scrollToBottom()">⬇️ للأسفل</button>
+    
+    <script>
+        let autoScroll = true;
+        let currentFilter = 'INFO';
+        let searchQuery = '';
+        
+        // Sample log data
+        const sampleLogs = [
+            { time: '2026-07-11 10:30:15.123', level: 'INFO', target: 'noor::http', message: 'GET /api/users 200 42ms', fields: { ip: '192.168.1.1', user_agent: 'curl/7.81' } },
+            { time: '2026-07-11 10:30:14.890', level: 'INFO', target: 'noor::orm', message: 'SELECT * FROM users WHERE id = $1', fields: { params: [1], duration_ms: 3 } },
+            { time: '2026-07-11 10:30:14.500', level: 'DEBUG', target: 'noor::cache', message: 'Cache HIT: user:1', fields: { ttl: 3600 } },
+            { time: '2026-07-11 10:30:13.200', level: 'WARN', target: 'noor::auth', message: 'Failed login attempt for user@example.com', fields: { ip: '10.0.0.5', attempts: 3 } },
+            { time: '2026-07-11 10:30:12.100', level: 'INFO', target: 'noor::http', message: 'POST /api/login 200 156ms', fields: { ip: '192.168.1.1' } },
+            { time: '2026-07-11 10:30:10.000', level: 'ERROR', target: 'noor::queue', message: 'Job failed: send_email', fields: { job_id: 'abc123', error: 'SMTP connection refused' } },
+            { time: '2026-07-11 10:30:09.500', level: 'INFO', target: 'noor::orm', message: 'INSERT INTO posts (title, content) VALUES ($1, $2)', fields: { duration_ms: 8 } },
+            { time: '2026-07-11 10:30:08.000', level: 'DEBUG', target: 'noor::http', message: 'Request body parsed', fields: { size: 1024 } },
+            { time: '2026-07-11 10:30:05.000', level: 'INFO', target: 'noor::cache', message: 'Cache MISS: user:2', fields: { key: 'user:2' } },
+            { time: '2026-07-11 10:30:00.000', level: 'FATAL', target: 'noor::http', message: 'Database connection lost', fields: { retry: 3 } },
+        ];
+        
+        function renderLogs() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '';
+            
+            let filtered = sampleLogs;
+            
+            if (currentFilter) {
+                const levels = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'];
+                const minIndex = levels.indexOf(currentFilter);
+                filtered = filtered.filter(log => levels.indexOf(log.level) >= minIndex);
+            }
+            
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filtered = filtered.filter(log => 
+                    log.message.toLowerCase().includes(q) ||
+                    log.target.toLowerCase().includes(q) ||
+                    log.level.toLowerCase().includes(q)
+                );
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty">لا توجد سجلات مطابقة</div>';
+                return;
+            }
+            
+            filtered.forEach(log => {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.onclick = () => entry.classList.toggle('expanded');
+                
+                let fieldsHtml = '';
+                if (log.fields) {
+                    fieldsHtml = `<div class="log-fields">${JSON.stringify(log.fields)}</div>`;
+                }
+                
+                entry.innerHTML = `
+                    <div class="log-time">${log.time}</div>
+                    <div class="log-level ${log.level}">${log.level}</div>
+                    <div class="log-target">${log.target}</div>
+                    <div>
+                        <div class="log-message">${log.message}</div>
+                        ${fieldsHtml}
+                    </div>
+                `;
+                
+                container.appendChild(entry);
+            });
+            
+            updateStats(filtered);
+            
+            if (autoScroll) {
+                scrollToBottom();
+            }
+        }
+        
+        function updateStats(logs) {
+            document.getElementById('info-count').textContent = logs.filter(l => l.level === 'INFO').length;
+            document.getElementById('warn-count').textContent = logs.filter(l => l.level === 'WARN').length;
+            document.getElementById('error-count').textContent = logs.filter(l => l.level === 'ERROR').length;
+            document.getElementById('fatal-count').textContent = logs.filter(l => l.level === 'FATAL').length;
+            document.getElementById('total-count').textContent = logs.length;
+        }
+        
+        function filterLevel(level) {
+            currentFilter = level;
+            renderLogs();
+        }
+        
+        function searchLogs(query) {
+            searchQuery = query;
+            renderLogs();
+        }
+        
+        function filterTarget(target) {
+            // Implement target filtering
+            renderLogs();
+        }
+        
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = event.target;
+            btn.classList.toggle('active', autoScroll);
+        }
+        
+        function scrollToBottom() {
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+        
+        function clearLogs() {
+            if (confirm('هل تريد مسح جميع السجلات؟')) {
+                document.getElementById('logContainer').innerHTML = '<div class="empty">تم مسح السجلات</div>';
+            }
+        }
+        
+        function exportLogs() {
+            const data = sampleLogs.map(l => JSON.stringify(l)).join('\n');
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `noor-logs-${Date.now()}.json`;
+            a.click();
+        }
+        
+        // Initial render
+        renderLogs();
+        
+        // Auto-refresh
+        setInterval(renderLogs, 5000);
+    </script>
+</body>
+</html>

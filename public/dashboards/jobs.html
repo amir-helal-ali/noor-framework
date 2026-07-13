@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طوابير المهام - Noor Framework</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: #1a1d29;
+            padding: 20px 30px;
+            border-bottom: 1px solid #2a2d39;
+        }
+        .header h1 {
+            font-size: 22px;
+            color: white;
+            margin-bottom: 5px;
+        }
+        .header p {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        .container {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #1a1d29;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #2a2d39;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 8px 0;
+        }
+        .stat-value.green { color: #4ade80; }
+        .stat-value.yellow { color: #facc15; }
+        .stat-value.red { color: #f87171; }
+        .stat-value.blue { color: #60a5fa; }
+        .stat-label {
+            font-size: 13px;
+            color: #9ca3af;
+        }
+        .card {
+            background: #1a1d29;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #2a2d39;
+            margin-bottom: 25px;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .card-header h2 {
+            font-size: 18px;
+            color: white;
+        }
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-running { background: #1e3a5f; color: #60a5fa; }
+        .badge-pending { background: #3a3a1e; color: #facc15; }
+        .badge-completed { background: #1e3a1e; color: #4ade80; }
+        .badge-failed { background: #3a1e1e; color: #f87171; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            text-align: right;
+            padding: 12px 15px;
+            background: #0f1117;
+            color: #9ca3af;
+            font-weight: 600;
+            font-size: 13px;
+            border-bottom: 1px solid #2a2d39;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #1e2130;
+            font-size: 14px;
+        }
+        tr:hover { background: #1e2130; }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #1e2130;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .progress-fill.green { background: #4ade80; }
+        .progress-fill.yellow { background: #facc15; }
+        .progress-fill.red { background: #f87171; }
+        .worker-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: #0f1117;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .worker-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .btn {
+            padding: 6px 14px;
+            border: 1px solid #2a2d39;
+            background: #0f1117;
+            color: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn:hover { background: #2a2d39; }
+        .btn-danger { border-color: #f87171; color: #f87171; }
+        .btn-success { border-color: #4ade80; color: #4ade80; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 طوابير المهام</h1>
+        <p>مراقبة وإدارة مهام الخلفية</p>
+    </div>
+    
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">⏳ معلقة</div>
+                <div class="stat-value yellow" id="pending-count">3</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">▶️ قيد التنفيذ</div>
+                <div class="stat-value blue" id="running-count">2</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">✅ مكتملة</div>
+                <div class="stat-value green" id="completed-count">1,245</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">❌ فاشلة</div>
+                <div class="stat-value red" id="failed-count">12</div>
+            </div>
+        </div>
+        
+        <!-- Workers -->
+        <div class="card">
+            <div class="card-header">
+                <h2>⚙️ العمال (Workers)</h2>
+                <span class="badge badge-running">2 نشط</span>
+            </div>
+            <div class="worker-status">
+                <div class="worker-dot"></div>
+                <span>Worker #1</span>
+                <span style="margin-right: auto; color: #9ca3af;">معالجة: send_email (job_abc123)</span>
+                <span style="color: #9ca3af;">CPU: 15%</span>
+                <span style="color: #9ca3af;">RAM: 45MB</span>
+            </div>
+            <div class="worker-status">
+                <div class="worker-dot"></div>
+                <span>Worker #2</span>
+                <span style="margin-right: auto; color: #9ca3af;">معالجة: generate_report (job_def456)</span>
+                <span style="color: #9ca3af;">CPU: 32%</span>
+                <span style="color: #9ca3af;">RAM: 62MB</span>
+            </div>
+        </div>
+        
+        <!-- Pending Jobs -->
+        <div class="card">
+            <div class="card-header">
+                <h2>⏳ المهام المعلقة</h2>
+                <button class="btn btn-success">▶️ بدء الكل</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>الاسم</th>
+                        <th>الأولوية</th>
+                        <th>المحاولات</th>
+                        <th>تاريخ الإنشاء</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>job_001</td>
+                        <td>send_email</td>
+                        <td><span class="badge badge-running">عالية</span></td>
+                        <td>0/3</td>
+                        <td>قبل 5 دقائق</td>
+                        <td>
+                            <button class="btn">▶️ تنفيذ</button>
+                            <button class="btn btn-danger">🗑️ حذف</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>job_002</td>
+                        <td>generate_report</td>
+                        <td><span class="badge badge-pending">عادية</span></td>
+                        <td>0/3</td>
+                        <td>قبل 10 دقائق</td>
+                        <td>
+                            <button class="btn">▶️ تنفيذ</button>
+                            <button class="btn btn-danger">🗑️ حذف</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>job_003</td>
+                        <td>process_image</td>
+                        <td><span class="badge badge-pending">عادية</span></td>
+                        <td>0/3</td>
+                        <td>قبل 15 دقيقة</td>
+                        <td>
+                            <button class="btn">▶️ تنفيذ</button>
+                            <button class="btn btn-danger">🗑️ حذف</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Failed Jobs -->
+        <div class="card">
+            <div class="card-header">
+                <h2>❌ المهام الفاشلة</h2>
+                <button class="btn">🔄 إعادة المحاولة للكل</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>الاسم</th>
+                        <th>المحاولات</th>
+                        <th>الخطأ</th>
+                        <th>آخر محاولة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>job_failed_1</td>
+                        <td>send_sms</td>
+                        <td>3/3</td>
+                        <td>SMTP connection refused</td>
+                        <td>قبل ساعة</td>
+                        <td>
+                            <button class="btn btn-success">🔄 إعادة</button>
+                            <button class="btn btn-danger">🗑️ حذف</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>job_failed_2</td>
+                        <td>sync_database</td>
+                        <td>3/3</td>
+                        <td>Connection timeout</td>
+                        <td>قبل 3 ساعات</td>
+                        <td>
+                            <button class="btn btn-success">🔄 إعادة</button>
+                            <button class="btn btn-danger">🗑️ حذف</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Job History Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📊 أداء المهام (آخر 24 ساعة)</h2>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <div style="margin-bottom: 8px; color: #9ca3af;">معدل النجاح</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill green" style="width: 98.5%;"></div>
+                    </div>
+                    <div style="margin-top: 5px; color: #4ade80; font-weight: 600;">98.5%</div>
+                </div>
+                <div>
+                    <div style="margin-bottom: 8px; color: #9ca3af;">متوسط زمن التنفيذ</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill yellow" style="width: 35%;"></div>
+                    </div>
+                    <div style="margin-top: 5px; color: #facc15; font-weight: 600;">1.4s</div>
+                </div>
+                <div>
+                    <div style="margin-bottom: 8px; color: #9ca3af;">الإنتاجية</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill green" style="width: 75%;"></div>
+                    </div>
+                    <div style="margin-top: 5px; color: #4ade80; font-weight: 600;">75 job/min</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh stats
+        setInterval(function() {
+            // In real app, fetch from API
+            const pending = Math.floor(Math.random() * 10);
+            const running = Math.floor(Math.random() * 3) + 1;
+            
+            document.getElementById('pending-count').textContent = pending;
+            document.getElementById('running-count').textContent = running;
+        }, 5000);
+    </script>
+</body>
+</html>

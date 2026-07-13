@@ -1,0 +1,18 @@
+# ============================================================
+# Noor Framework - Grafana Dashboard
+# ============================================================
+
+apiVersion: 1
+
+dashboards:
+  - name: 'Noor Framework'
+    folder: 'Noor'
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
+
+  - name: 'Infrastructure'
+    folder: 'Infrastructure'
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards/infrastructure

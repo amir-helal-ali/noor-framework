@@ -1,0 +1,336 @@
+# ============================================================
+# Noor Framework - Kubernetes Deployment
+# ============================================================
+
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: noor-app
+  labels:
+    app.kubernetes.io/name: noor-framework
+    app.kubernetes.io/part-of: noor-app
+
+---
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: noor-config
+  namespace: noor-app
+data:
+  APP_ENV: "production"
+  NOOR_SERVER_HOST: "0.0.0.0"
+  NOOR_SERVER_PORT: "8080"
+  DATABASE_DRIVER: "postgres"
+  RUST_LOG: "info"
+  NOOR_SERVER_WORKERS: "4"
+
+---
+# Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: noor-secrets
+  namespace: noor-app
+type: Opaque
+stringData:
+  DATABASE_URL: "postgres://noor:password@postgres-service:5432/noor"
+  JWT_SECRET: "your-super-secret-jwt-key-change-me"
+  POSTGRES_PASSWORD: "password"
+
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: noor-app
+  namespace: noor-app
+  labels:
+    app: noor-app
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: noor-app
+  template:
+    metadata:
+      labels:
+        app: noor-app
+    spec:
+      containers:
+        - name: noor-app
+          image: noorframework/noor:latest
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: noor-config
+            - secretRef:
+                name: noor-secrets
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: storage
+              mountPath: /app/storage
+            - name: uploads
+              mountPath: /app/storage/uploads
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: noor-storage-pvc
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: noor-uploads-pvc
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: noor-service
+  namespace: noor-app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app: noor-app
+
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: noor-ingress
+  namespace: noor-app
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+spec:
+  tls:
+    - hosts:
+        - api.example.com
+      secretName: noor-tls
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: noor-service
+                port:
+                  number: 80
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: noor-hpa
+  namespace: noor-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: noor-app
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# Persistent Volume Claim - Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: noor-storage-pvc
+  namespace: noor-app
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+# Persistent Volume Claim - Uploads
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: noor-uploads-pvc
+  namespace: noor-app
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd
+
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: noor-app
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: noor
+            - name: POSTGRES_USER
+              value: noor
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: noor-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: fast-ssd
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: noor-app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres
+
+---
+# Pod Disruption Budget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: noor-pdb
+  namespace: noor-app
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: noor-app
+
+---
+# Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: noor-network-policy
+  namespace: noor-app
+spec:
+  podSelector:
+    matchLabels:
+      app: noor-app
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53

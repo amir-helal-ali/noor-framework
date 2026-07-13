@@ -1,0 +1,64 @@
+# ============================================================
+# Noor Framework - Production Dockerfile (Alpine)
+# Dockerfile للإنتاج - مبني على Alpine
+# ============================================================
+# Ultra-small production image (~10MB)
+# صورة إنتاج صغيرة جداً (~10 ميجا)
+# ============================================================
+
+FROM rust:1.96-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    musl-dev \
+    openssl-dev \
+    openssl-libs-dev \
+    pkgconfig \
+    build-base
+
+WORKDIR /app
+
+# Copy Cargo files first for better caching
+COPY Cargo.toml Cargo.lock* build.rs ./
+
+# Copy source code
+COPY src/ ./src/
+COPY noor.toml ./
+
+# Build with size optimization
+RUN cargo build --release --bin noor-server
+
+# ---------- Runtime Stage ----------
+FROM alpine:3.19 AS runtime
+
+# Install minimal runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    libssl3 \
+    libgcc \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN adduser -D -u 1000 noor
+
+# Create directories
+RUN mkdir -p /app/storage/cache /app/storage/logs /app/storage/uploads /app/public && \
+    chown -R noor:noor /app
+
+WORKDIR /app
+
+# Copy the binary
+COPY --from=builder /app/target/release/noor-server /app/noor-server
+COPY --from=builder /app/noor.toml /app/noor.toml
+
+# Switch to non-root user
+USER noor
+
+EXPOSE 8080
+
+# Minimal health check
+HEALTHCHECK --interval=60s --timeout=3s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+CMD ["/app/noor-server"]

@@ -1,0 +1,87 @@
+# ============================================================
+# Noor Framework - Development Docker Compose
+# Docker Compose لبيئة التطوير
+# ============================================================
+# Hot reload + development tools
+# إعادة تحميل ساخنة + أدوات التطوير
+# ============================================================
+
+services:
+  # ---------- Noor Development Server ----------
+  noor-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: noor-dev
+    ports:
+      - "8080:8080"
+      - "9229:9229"  # Debugger port
+    volumes:
+      - ./src:/app/src:ro
+      - ./resources:/app/resources:ro
+      - ./public:/app/public:ro
+      - ./tests:/app/tests:ro
+      - ./storage:/app/storage
+      - ./noor.toml:/app/noor.toml:ro
+    environment:
+      - APP_ENV=development
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+      - DATABASE_URL=sqlite:///app/storage/noor_dev.db
+      - JWT_SECRET=dev-secret-key-not-for-production
+    command: cargo watch -x "run --bin noor-server"
+    networks:
+      - noor-dev-network
+
+  # ---------- PostgreSQL for Development ----------
+  postgres-dev:
+    image: postgres:16-alpine
+    container_name: noor-postgres-dev
+    environment:
+      POSTGRES_DB: noor_dev
+      POSTGRES_USER: noor
+      POSTGRES_PASSWORD: noor_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    networks:
+      - noor-dev-network
+
+  # ---------- Redis for Development ----------
+  redis-dev:
+    image: redis:7-alpine
+    container_name: noor-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    networks:
+      - noor-dev-network
+
+  # ---------- Adminer (Database GUI) ----------
+  adminer:
+    image: adminer:latest
+    container_name: noor-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres-dev
+    networks:
+      - noor-dev-network
+
+  # ---------- Mailhog (Email Testing) ----------
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: noor-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - noor-dev-network
+
+volumes:
+  postgres-dev-data:
+
+networks:
+  noor-dev-network:
+    driver: bridge

@@ -1,0 +1,15 @@
+<div class="card">
+    <h2>{{escape post.title}}</h2>
+    <div style="color: #7f8c8d; font-size: 0.9em; margin-bottom: 15px;">
+        بواسطة {{escape post.author}} • {{date post.created_at}} • {{post.views}} مشاهدة
+    </div>
+    <div class="post-content">
+        {{escape post.excerpt}}
+    </div>
+    <div class="actions" style="margin-top: 15px;">
+        <a href="/blog/{{post.id}}" class="btn btn-primary btn-sm">اقرأ المزيد</a>
+        {{#if can_edit}}
+        <a href="/admin/posts/{{post.id}}/edit" class="btn btn-secondary btn-sm">تعديل</a>
+        {{/if}}
+    </div>
+</div>

@@ -1,0 +1,55 @@
+# Noor Framework Configuration
+# إعدادات إطار عمل نور
+# ============================================================
+
+[app]
+name = "Noor Framework"
+env = "development"
+debug = true
+timezone = "UTC"
+locale = "ar"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 4
+max_connections = 1024
+request_timeout = 30
+body_limit = 10485760  # 10MB
+static_dir = "public"
+upload_dir = "storage/uploads"
+compression = true
+
+[database]
+driver = "sqlite"
+url = "sqlite://storage/noor.db"
+max_connections = 10
+min_connections = 1
+enable_logging = false
+
+[security]
+jwt_secret = "change-this-in-production-use-a-strong-random-secret-key-here"
+jwt_expiry = 3600
+session_lifetime = 86400
+bcrypt_cost = 12
+enable_csrf = true
+enable_xss_filter = true
+rate_limit_per_minute = 60
+cors_origins = ["*"]
+secure_headers = true
+
+[cache]
+driver = "file"
+prefix = "noor:"
+default_ttl = 3600
+cache_dir = "storage/cache"
+
+[view]
+template_dir = "resources/views"
+cache_templates = true
+auto_reload = true
+
+[log]
+level = "info"
+file = "storage/logs/app.log"
+json = false

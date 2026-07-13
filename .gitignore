@@ -1,0 +1,43 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Database files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+noor_live_demo.db
+
+# Storage
+storage/uploads/*
+storage/logs/*
+storage/cache/*
+!storage/uploads/.gitkeep
+!storage/logs/.gitkeep
+!storage/cache/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Cargo lock (library, not application)
+# Cargo.lock
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/

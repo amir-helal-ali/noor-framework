@@ -1,0 +1,133 @@
+# ============================================================
+# Noor Framework - Alert Rules
+# ============================================================
+
+groups:
+  # Application alerts
+  - name: noor-app
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          rate(http_errors_total[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on Noor app"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_ms_bucket[5m])) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is {{ $value }}ms (threshold: 1000ms)"
+
+      # App down
+      - alert: AppDown
+        expr: up{job="noor-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Noor app is down"
+          description: "Noor app has been down for more than 1 minute"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          process_resident_memory_bytes{job="noor-app"} > 256 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize1024 }} (threshold: 256MB)"
+
+  # Database alerts
+  - name: database
+    rules:
+      # Database down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been down for more than 1 minute"
+
+      # Slow queries
+      - alert: SlowQueries
+        expr: |
+          rate(db_query_duration_ms_sum[5m]) / rate(db_query_duration_ms_count[5m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries"
+          description: "Average query time is {{ $value }}ms"
+
+      # High connection count
+      - alert: HighConnectionCount
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connection count"
+
+  # Infrastructure alerts
+  - name: infrastructure
+    rules:
+      # High CPU
+      - alert: HighCpuUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      # High disk usage
+      - alert: HighDiskUsage
+        expr: |
+          (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}%"
+
+      # Low memory
+      - alert: LowMemory
+        expr: |
+          node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low available memory"
+          description: "Only {{ $value }}% memory available"
+
+  # Cache alerts
+  - name: cache
+    rules:
+      # Low cache hit rate
+      - alert: LowCacheHitRate
+        expr: |
+          rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) * 100 < 50
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}%"

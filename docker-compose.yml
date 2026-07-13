@@ -1,0 +1,104 @@
+# ============================================================
+# Noor Framework - Docker Compose
+# ============================================================
+# Development and production ready configuration.
+# Supports SQLite by default (for weak servers) and
+# PostgreSQL/MySQL for production.
+#
+# يدعم SQLite افتراضياً و PostgreSQL/MySQL للإنتاج.
+# ============================================================
+
+services:
+  # ---------- Noor Application ----------
+  noor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: noor-app
+    ports:
+      - "${NOOR_PORT:-8080}:8080"
+    volumes:
+      - ./storage:/app/storage
+      - ./public:/app/public
+      - ./noor.toml:/app/noor.toml:ro
+    environment:
+      - APP_ENV=production
+      - NOOR_SERVER_HOST=0.0.0.0
+      - NOOR_SERVER_PORT=8080
+      - DATABASE_URL=sqlite:///app/storage/noor.db
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - RUST_LOG=info
+    restart: unless-stopped
+    networks:
+      - noor-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+
+  # ---------- PostgreSQL (Optional, for production) ----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: noor-postgres
+    profiles: ["production"]
+    environment:
+      POSTGRES_DB: noor
+      POSTGRES_USER: noor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noor_secret}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - noor-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ---------- Nginx Reverse Proxy (Optional) ----------
+  nginx:
+    image: nginx:alpine
+    container_name: noor-nginx
+    profiles: ["production"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - noor
+    restart: unless-stopped
+    networks:
+      - noor-network
+
+  # ---------- Redis (Optional, for high-traffic) ----------
+  redis:
+    image: redis:7-alpine
+    container_name: noor-redis
+    profiles: ["high-traffic"]
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - noor-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  noor-network:
+    driver: bridge

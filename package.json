@@ -1,0 +1,34 @@
+{
+  "name": "noor-framework",
+  "version": "1.0.0",
+  "description": "A high-performance, secure, fullstack MVC web framework built with Rust and Zig",
+  "main": "src/lib.rs",
+  "scripts": {
+    "build": "cargo build --release",
+    "dev": "cargo run --bin noor-server",
+    "test": "cargo test",
+    "lint": "cargo clippy",
+    "fmt": "cargo fmt",
+    "docs": "cargo doc --open",
+    "docker:build": "docker build -t noor:latest .",
+    "docker:run": "docker-compose up -d",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up -d"
+  },
+  "keywords": [
+    "web",
+    "framework",
+    "rust",
+    "zig",
+    "mvc",
+    "security",
+    "performance"
+  ],
+  "author": "Noor Framework Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noor-framework/noor.git"
+  },
+  "homepage": "https://noor-framework.github.io",
+  "documentation": "https://noor-framework.github.io/docs"
+}
